@@ -1,0 +1,181 @@
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <cstring>
+
+using namespace std;
+
+// Class representing a bank account (Object-Oriented Design)
+class BankAccount {
+private:
+    int accountNumber;
+    char accountHolderName[50];
+    char accountType; // 'S' for Savings, 'C' for Current
+    double balance;
+
+public:
+    // Default constructor
+    BankAccount() {
+        accountNumber = 0;
+        balance = 0.0;
+    }
+
+    // Function to take input from user
+    void createAccount() {
+        cout << "\nEnter Account Number: ";
+        cin >> accountNumber;
+        cin.ignore(); // Clear buffer
+
+        cout << "Enter Account Holder Name: ";
+        cin.getline(accountHolderName, 50);
+
+        cout << "Enter Account Type (S for Savings / C for Current): ";
+        cin >> accountType;
+        accountType = toupper(accountType);
+
+        cout << "Enter Initial Deposit Amount: $";
+        cin >> balance;
+        
+        cout << "\nAccount Created Successfully!";
+    }
+
+    // Function to display account details
+    void displayAccount() const {
+        cout << "\n-----------------------------------";
+        cout << "\nAccount Number : " << accountNumber;
+        cout << "\nHolder Name    : " << accountHolderName;
+        cout << "\nAccount Type   : " << (accountType == 'S' ? "Savings" : "Current");
+        cout << "\nCurrent Balance: $" << fixed << setprecision(2) << balance;
+        cout << "\n-----------------------------------";
+    }
+
+    // Function to deposit money
+    void deposit(double amount) {
+        if (amount > 0) {
+            balance += amount;
+            cout << "\n$" << amount << " deposited successfully.";
+        } else {
+            cout << "\nInvalid deposit amount.";
+        }
+    }
+
+    // Function to withdraw money
+    bool withdraw(double amount) {
+        if (amount <= 0) {
+            cout << "\nInvalid withdrawal amount.";
+            return false;
+        }
+        if (amount > balance) {
+            cout << "\nInsufficient balance! Withdrawal failed.";
+            return false;
+        }
+        balance -= amount;
+        cout << "\n$" << amount << " withdrawn successfully.";
+        return true;
+    }
+
+    // Getter for account number
+    int getAccountNumber() const {
+        return accountNumber;
+    }
+};
+
+// Global file name for data persistence
+const string FILE_NAME = "bank_records.dat";
+
+// Function Declarations for System Operations
+void writeNewAccount();
+void displayAllAccounts();
+void checkBalance(int accNum);
+void performTransaction(int accNum, int actionType); // actionType: 1 = Deposit, 2 = Withdraw
+void closeAccount(int accNum);
+void menu();
+
+int main() {
+    menu();
+    return 0;
+}
+
+// Menu Interface
+void menu() {
+    int choice;
+    int accNum;
+
+    do {
+        cout << "\n=========================================";
+        cout << "\n        BANK MANAGEMENT SYSTEM           ";
+        cout << "\n=========================================";
+        cout << "\n1. Open New Account";
+        cout << "\n2. Balance Inquiry";
+        cout << "\n3. Deposit Money";
+        cout << "\n4. Withdraw Money";
+        cout << "\n5. Display All Registered Accounts";
+        cout << "\n6. Close an Account";
+        cout << "\n7. Exit";
+        cout << "\n=========================================";
+        cout << "\nEnter option (1-7): ";
+        cin >> choice;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(1000, '\n');
+            cout << "\nInvalid key! Please select a valid choice.\n";
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                writeNewAccount();
+                break;
+            case 2:
+                cout << "\nEnter Account Number: ";
+                cin >> accNum;
+                checkBalance(accNum);
+                break;
+            case 3:
+                cout << "\nEnter Account Number: ";
+                cin >> accNum;
+                performTransaction(accNum, 1);
+                break;
+            case 4:
+                cout << "\nEnter Account Number: ";
+                cin >> accNum;
+                performTransaction(accNum, 2);
+                break;
+            case 5:
+                displayAllAccounts();
+                break;
+            case 6:
+                cout << "\nEnter Account Number to close: ";
+                cin >> accNum;
+                closeAccount(accNum);
+                break;
+            case 7:
+                cout << "\nThank you for using our Banking Application. Goodbye!\n";
+                break;
+            default:
+                cout << "\nInvalid choice. Try again.";
+        }
+    } while (choice != 7);
+}
+
+// 1. Open and save a new account
+void writeNewAccount() {
+    BankAccount account;
+    ofstream outFile(FILE_NAME, ios::binary | ios::app);
+
+    if (!outFile) {
+        cout << "\nFile Error! Could not complete registration.";
+        return;
+    }
+
+    account.createAccount();
+    // Write entire object block to file
+    outFile.write(reinterpret_cast<char*>(&account), sizeof(BankAccount));
+    outFile.close();
+}
+
+// 2. Fetch specific record for a balance inquiry
+void checkBalance(int accNum) {
+    BankAccount account;
+    ifstream inFile(FILE_NAME, ios::binary);
