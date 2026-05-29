@@ -1,0 +1,130 @@
+#include <iostream>
+#include <vector>
+#include <string>
+
+// ==========================================
+// TIC-TAC-TOE GAME CLASS
+// ==========================================
+class TicTacToe {
+private:
+    std::vector<char> board; // 1D Array representing 3x3 grid (indices 0-8)
+    char currentTurn;
+
+    // Reset board to its initial state (numbers '1'-'9')
+    void resetBoard() {
+        board = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
+        currentTurn = 'X'; // 'X' always goes first
+    }
+
+    // Display the 3x3 game grid dynamically
+    void displayBoard() const {
+        std::cout << "\n";
+        std::cout << "     |     |     \n";
+        std::cout << "  " << board[0] << "  |  " << board[1] << "  |  " << board[2] << "  \n";
+        std::cout << "_____|_____|_____\n";
+        std::cout << "     |     |     \n";
+        std::cout << "  " << board[3] << "  |  " << board[4] << "  |  " << board[5] << "  \n";
+        std::cout << "_____|_____|_____\n";
+        std::cout << "     |     |     \n";
+        std::cout << "  " << board[6] << "  |  " << board[7] << "  |  " << board[8] << "  \n";
+        std::cout << "     |     |     \n";
+        std::cout << "\n";
+    }
+
+    // Check all combinations to see if someone won
+    bool checkWin() const {
+        // Winning combinations array (rows, columns, diagonals)
+        const int winConditions[8][3] = {
+            {0, 1, 2}, {3, 4, 5}, {6, 7, 8}, // Rows
+            {0, 3, 6}, {1, 4, 7}, {2, 5, 8}, // Columns
+            {0, 4, 8}, {2, 4, 6}             // Diagonals
+        };
+
+        for (int i = 0; i < 8; ++i) {
+            if (board[winConditions[i][0]] == board[winConditions[i][1]] &&
+                board[winConditions[i][1]] == board[winConditions[i][2]]) {
+                return true; 
+            }
+        }
+        return false;
+    }
+
+    // Check if the board is completely full (Draw)
+    bool checkDraw() const {
+        for (int i = 0; i < 9; ++i) {
+            // If any spot still contains a number placeholder, game isn't a draw yet
+            if (board[i] != 'X' && board[i] != 'O') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Alternate active turn between 'X' and 'O'
+    void switchTurn() {
+        currentTurn = (currentTurn == 'X') ? 'O' : 'X';
+    }
+
+public:
+    // Main execution loop for a single game match
+    void playGame() {
+        resetBoard();
+        bool isGameRunning = true;
+
+        std::cout << "\n🏁 Match Started! Player 1 (X) vs Player 2 (O)\n";
+
+        while (isGameRunning) {
+            displayBoard();
+            int choice;
+            std::cout << "Player " << currentTurn << ", enter a position (1-9): ";
+            
+            // Input Validation loop
+            if (!(std::cin >> choice) || choice < 1 || choice > 9 || board[choice - 1] == 'X' || board[choice - 1] == 'O') {
+                std::cin.clear(); // Clear stream flags
+                std::cin.ignore(1000, '\n'); // Purge leftover input buffer
+                std::cout << "❌ Invalid move! Please select an available numbered slot.\n";
+                continue;
+            }
+
+            // Apply move (adjusting 1-based human indexing to 0-based code array indexing)
+            board[choice - 1] = currentTurn;
+
+            // Check game state updates
+            if (checkWin()) {
+                displayBoard();
+                std::cout << "🎉 Congratulations! Player " << currentTurn << " wins this match!\n";
+                isGameRunning = false;
+            } else if (checkDraw()) {
+                displayBoard();
+                std::cout << "🤝 It's a draw! Well played by both.\n";
+                isGameRunning = false;
+            } else {
+                switchTurn(); // Keep playing
+            }
+        }
+    }
+};
+
+// ==========================================
+// MAIN REPLAY CONTROLLER
+// ==========================================
+int main() {
+    TicTacToe game;
+    char replayChoice;
+
+    std::cout << "=====================================\n";
+    std::cout << "❌ ⭕ WELCOME TO CONSOLE TIC-TAC-TOE\n";
+    std::cout << "=====================================\n";
+
+    do {
+        game.playGame();
+
+        std::cout << "\nWould you like to play another match? (y/n): ";
+        std::cin >> replayChoice;
+        replayChoice = std::tolower(replayChoice);
+
+    } while (replayChoice == 'y');
+
+    std::cout << "\n👋 Thanks for playing! Have a great day.\n";
+    return 0;
+}
