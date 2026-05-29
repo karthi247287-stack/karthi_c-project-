@@ -1,0 +1,260 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <map>
+#include <algorithm>
+#include <iomanip>
+
+// ==========================================
+// 1. BOOK CLASS
+// ==========================================
+class Book {
+private:
+    std::string bookID;
+    std::string title;
+    std::string author;
+    bool isIssued;
+
+public:
+    Book() : bookID(""), title(""), author(""), isIssued(false) {}
+    Book(std::string id, std::string t, std::string a) 
+        : bookID(id), title(t), author(a), isIssued(false) {}
+
+    // Getters and Setters
+    std::string getID() const { return bookID; }
+    std::string getTitle() const { return title; }
+    std::string getAuthor() const { return author; }
+    bool getIssuedStatus() const { return isIssued; }
+    
+    void setIssuedStatus(bool status) { isIssued = status; }
+
+    // Display book details
+    void displayBook() const {
+        std::cout << "ID: " << std::left << std::setw(8) << bookID 
+                  << " | Title: " << std::setw(25) << ("'" + title + "'")
+                  << " | Author: " << std::setw(20) << author 
+                  << " | Status: " << (isIssued ? "⚠️ Issued" : "✅ Available") 
+                  << std::endl;
+    }
+};
+
+// ==========================================
+// 2. MEMBER CLASS
+// ==========================================
+class Member {
+private:
+    std::string memberID;
+    std::string name;
+    std::vector<std::string> borrowedBookIDs; // Tracks keys of borrowed books
+
+public:
+    Member() : memberID(""), name("") {}
+    Member(std::string id, std::string n) : memberID(id), name(n) {}
+
+    std::string getID() const { return memberID; }
+    std::string getName() const { return name; }
+    std::vector<std::string> getBorrowedBooks() const { return borrowedBookIDs; }
+
+    void borrowBook(std::string bookID) {
+        borrowedBookIDs.push_back(bookID);
+    }
+
+    void returnBook(std::string bookID) {
+        auto it = std::find(borrowedBookIDs.begin(), borrowedBookIDs.end(), bookID);
+        if (it != borrowedBookIDs.end()) {
+            borrowedBookIDs.erase(it);
+        }
+    }
+
+    void displayMember() const {
+        std::cout << "Member ID: " << std::left << std::setw(8) << memberID 
+                  << " | Name: " << std::setw(15) << name 
+                  << " | Books Borrowed Count: " << borrowedBookIDs.size() << std::endl;
+    }
+};
+
+// ==========================================
+// 3. LIBRARY CLASS (System Controller)
+// ==========================================
+class Library {
+private:
+    std::map<std::string, Book> books;     // O(log N) lookup via Book ID
+    std::map<std::string, Member> members; // O(log N) lookup via Member ID
+
+    // Helper to convert strings to lowercase for case-insensitive searching
+    std::string toLowerCase(std::string str) const {
+        std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+        return str;
+    }
+
+public:
+    // Add Book to system
+    void addBook(std::string id, std::string title, std::string author) {
+        if (books.find(id) != books.end()) {
+            std::cout << "❌ Error: Book ID " << id << " already exists!\n";
+            return;
+        }
+        books[id] = Book(id, title, author);
+        std::cout << "📚 Book added successfully!\n";
+    }
+
+    // Register Member to system
+    void registerMember(std::string id, std::string name) {
+        if (members.find(id) != members.end()) {
+            std::cout << "❌ Error: Member ID " << id << " already exists!\n";
+            return;
+        }
+        members[id] = Member(id, name);
+        std::cout << "👤 Member registered successfully!\n";
+    }
+
+    // Issue Book feature
+    void issueBook(std::string bookID, std::string memberID) {
+        if (books.find(bookID) == books.end()) {
+            std::cout << "❌ Error: Book record not found.\n";
+            return;
+        }
+        if (members.find(memberID) == members.end()) {
+            std::cout << "❌ Error: Member record not found.\n";
+            return;
+        }
+
+        if (books[bookID].getIssuedStatus()) {
+            std::cout << "⚠️ Error: Book is already checked out by another member.\n";
+            return;
+        }
+
+        books[bookID].setIssuedStatus(true);
+        members[memberID].borrowBook(bookID);
+        std::cout << "✅ Success: '" << books[bookID].getTitle() 
+                  << "' has been issued to " << members[memberID].getName() << ".\n";
+    }
+
+    // Return Book feature
+    void returnBook(std::string bookID, std::string memberID) {
+        if (books.find(bookID) == books.end() || members.find(memberID) == members.end()) {
+            std::cout << "❌ Error: Invalid Book or Member ID.\n";
+            return;
+        }
+
+        std::vector<std::string> borrowed = members[memberID].getBorrowedBooks();
+        if (std::find(borrowed.begin(), borrowed.end(), bookID) == borrowed.end()) {
+            std::cout << "⚠️ Error: This member does not have this specific book checked out.\n";
+            return;
+        }
+
+        books[bookID].setIssuedStatus(false);
+        members[memberID].returnBook(bookID);
+        std::cout << "🔄 Success: '" << books[bookID].getTitle() 
+                  << "' has been returned successfully.\n";
+    }
+
+    // Search functionality by Title or Author
+    void searchBooks(std::string query) const {
+        query = toLowerCase(query);
+        bool found = false;
+
+        std::cout << "\n🔍 Search results for \"" << query << "\":\n";
+        for (const auto& pair : books) {
+            const Book& b = pair.second;
+            if (toLowerCase(b.getTitle()).find(query) != std::string::npos ||
+                toLowerCase(b.getAuthor()).find(query) != std::string::npos) {
+                std::cout << "  - ";
+                b.displayBook();
+                found = true;
+            }
+        }
+        if (!found) {
+            std::cout << "   No books matched your search query.\n";
+        }
+    }
+
+    // Inventory display
+    void displayInventory() const {
+        std::cout << "\n--- 📚 LIBRARY INVENTORY ---\n";
+        if (books.empty()) std::cout << "Inventory is empty.\n";
+        for (const auto& pair : books) pair.second.displayBook();
+
+        std::cout << "\n--- 👤 REGISTERED MEMBERS ---\n";
+        if (members.empty()) std::cout << "No members registered.\n";
+        for (const auto& pair : members) pair.second.displayMember();
+    }
+};
+
+// ==========================================
+// 4. INTERACTIVE MENU SYSTEM
+// ==========================================
+int main() {
+    Library lib;
+
+    // Seed Data for Demonstration
+    lib.addBook("B01", "The Hobbit", "J.R.R. Tolkien");
+    lib.addBook("B02", "1984", "George Orwell");
+    lib.addBook("B03", "Animal Farm", "George Orwell");
+    lib.registerMember("M01", "Alice Smith");
+    lib.registerMember("M02", "Bob Jones");
+
+    int choice;
+    std::string id1, id2, str1;
+
+    do {
+        std::cout << "\n===================================\n";
+        std::cout << "🏛️  LIBRARY MANAGEMENT SYSTEM\n";
+        std::cout << "===================================\n";
+        std::cout << "1. Add a Book\n";
+        std::cout << "2. Register a Member\n";
+        std::cout << "3. Issue a Book\n";
+        std::cout << "4. Return a Book\n";
+        std::cout << "5. Search Books (Title/Author)\n";
+        std::cout << "6. Display Inventory & Status\n";
+        std::cout << "7. Exit\n";
+        std::cout << "Enter your choice (1-7): ";
+        
+        if (!(std::cin >> choice)) {
+            std::cin.clear(); 
+            std::cin.ignore(1000, '\n');
+            std::cout << "❌ Invalid input. Please enter a number.\n";
+            continue;
+        }
+        std::cin.ignore(); // Clean leftover newline from buffer
+
+        switch (choice) {
+            case 1:
+                std::cout << "Enter Book ID: "; std::getline(std::cin, id1);
+                std::cout << "Enter Book Title: "; std::getline(std::cin, str1);
+                std::cout << "Enter Author Name: "; std::getline(std::cin, id2);
+                lib.addBook(id1, str1, id2);
+                break;
+            case 2:
+                std::cout << "Enter Member ID: "; std::getline(std::cin, id1);
+                std::cout << "Enter Member Name: "; std::getline(std::cin, str1);
+                lib.registerMember(id1, str1);
+                break;
+            case 3:
+                std::cout << "Enter Book ID: "; std::getline(std::cin, id1);
+                std::cout << "Enter Member ID: "; std::getline(std::cin, id2);
+                lib.issueBook(id1, id2);
+                break;
+            case 4:
+                std::cout << "Enter Book ID: "; std::getline(std::cin, id1);
+                std::cout << "Enter Member ID: "; std::getline(std::cin, id2);
+                lib.returnBook(id1, id2);
+                break;
+            case 5:
+                std::cout << "Enter Title or Author search query: "; std::getline(std::cin, str1);
+                lib.search_books(str1);
+                lib.searchBooks(str1);
+                break;
+            case 6:
+                lib.displayInventory();
+                break;
+            case 7:
+                std::cout << "\n👋 System closed. Thank you!\n";
+                break;
+            default:
+                std::cout << "❌ Invalid Choice! Please choose 1 to 7.\n";
+        }
+    } while (choice != 7);
+
+    return 0;
+}
